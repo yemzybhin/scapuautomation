@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "baseUrl": "./",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "allowSyntheticDefaultImports": true,
+    // "outDir": "dist",
+    "rootDir": "./src",
+    "typeRoots": ["./node_modules/@types"],
+    // "types": ["node"],
+    "strict": false,
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "removeComments": true
+  },
+  "tsc-alias": {
+    "resolveFullPaths": true
+  },
+
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/utils/migratedb.js"],
+  "exclude": ["node_modules", "dist", "__tests__", "**/*.spec.ts", "**/__tests__/**"]
+}
