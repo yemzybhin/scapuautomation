@@ -1,4 +1,6 @@
 export interface OpinionPlacardVideoProps {
+  // Remotion compositions require props assignable to Record<string, unknown>.
+  [key: string]: unknown;
   authorName: string;
   question: string;
   category: string;

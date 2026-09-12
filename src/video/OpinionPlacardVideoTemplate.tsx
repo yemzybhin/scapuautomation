@@ -386,7 +386,6 @@ export const OpinionPlacardVideoTemplate: React.FC<OpinionPlacardVideoProps> = (
             : interpolate(cardIntro, [0, 1], [0.91, visualScale], {
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'clamp',
-                output: 'perceptual-scale',
               }),
           translate: staticCardOnly
             ? '0px 0px'

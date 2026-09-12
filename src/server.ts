@@ -1,5 +1,4 @@
 import { app } from './app.js';
-import { DatabaseService } from './config/database.config';
 import { env } from './config/env-config';
 import CronManager from './cron/index';
 import { logger } from './middleware/pino-logger';

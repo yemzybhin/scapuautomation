@@ -28,4 +28,4 @@ src/logs/*
 migrations/
 
 # Local placard output when social publishing is disabled
-social/
+/social/
