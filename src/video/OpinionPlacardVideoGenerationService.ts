@@ -29,7 +29,43 @@ export type OpinionPlacardVideoInput = {
   backgroundVideoQuery?: string;
 };
 
+/**
+ * Render containers have no GPU and a 64MB /dev/shm. Software GL plus a
+ * single-process Chrome avoids both the missing GPU and the shared memory
+ * ceiling that otherwise shows up as "Target closed".
+ */
+const CHROMIUM_OPTIONS = {
+  gl: 'swangle',
+  enableMultiProcessOnLinux: false,
+} as const;
+
 export class OpinionPlacardVideoGenerationService {
+  /**
+   * Webpack bundling costs hundreds of megabytes and ~18s. On a small container
+   * that peak is what gets the render OOM-killed, so the bundle is built once
+   * per process and reused. Remotion serves the bundle folder from disk, so
+   * per-run assets can still be dropped into its public/ directory afterwards.
+   */
+  private static bundlePromise: Promise<string> | null = null;
+
+  private async getBundleLocation(): Promise<string> {
+    if (!OpinionPlacardVideoGenerationService.bundlePromise) {
+      const prebuilt = path.join(process.cwd(), 'remotion-bundle');
+
+      if (fs.existsSync(path.join(prebuilt, 'index.html'))) {
+        logger.info({ prebuilt }, 'Using prebuilt Remotion bundle');
+        OpinionPlacardVideoGenerationService.bundlePromise = Promise.resolve(prebuilt);
+      } else {
+        logger.info('No prebuilt bundle found; building in process (dev fallback)');
+        OpinionPlacardVideoGenerationService.bundlePromise = bundle({
+          entryPoint: path.resolve(process.cwd(), 'src/video/index.tsx'),
+        });
+      }
+    }
+
+    return OpinionPlacardVideoGenerationService.bundlePromise;
+  }
+
   private readonly pexelsService = new PexelsBackgroundService();
 
   private readonly durationInFrames = 330;
@@ -40,16 +76,15 @@ export class OpinionPlacardVideoGenerationService {
   public async generateVideo(input: OpinionPlacardVideoInput): Promise<string | null> {
     try {
       const outputPath = path.join(input.outputDir, `${input.slug}.mp4`);
-      // The background clip must land in public/ before bundling: the bundler
-      // snapshots that folder, so anything copied afterwards 404s at render time.
+      const bundleLocation = await this.getBundleLocation();
+      // Staged into the bundle's own public/ folder, which is served from disk,
+      // so a cached bundle still picks up this run's background.
       const background = await this.prepareBackground(
+        bundleLocation,
         input.slug,
         input.runCount,
         input.backgroundVideoQuery,
       );
-      const bundleLocation = await bundle({
-        entryPoint: path.resolve(process.cwd(), 'src/video/index.tsx'),
-      });
       const avatarDataUrl = await this.readAvatarDataUrl(input.avatarPath);
       const inputProps: OpinionPlacardVideoProps = {
         authorName: input.authorName,
@@ -71,6 +106,8 @@ export class OpinionPlacardVideoGenerationService {
         serveUrl: bundleLocation,
         id: VideoTemplate.OPINION_PLACARD,
         inputProps,
+        timeoutInMilliseconds: env.REMOTION_TIMEOUT_MS,
+        chromiumOptions: CHROMIUM_OPTIONS,
       });
 
       await renderMedia({
@@ -86,8 +123,11 @@ export class OpinionPlacardVideoGenerationService {
         imageFormat: 'jpeg',
         crf: 22,
         pixelFormat: 'yuv420p',
-        x264Preset: 'medium',
-        concurrency: 4,
+        x264Preset: 'veryfast',
+        concurrency: env.REMOTION_CONCURRENCY,
+        timeoutInMilliseconds: env.REMOTION_TIMEOUT_MS,
+        chromiumOptions: CHROMIUM_OPTIONS,
+        offthreadVideoCacheSizeInBytes: env.REMOTION_VIDEO_CACHE_BYTES,
         outputLocation: outputPath,
         inputProps,
       });
@@ -102,9 +142,7 @@ export class OpinionPlacardVideoGenerationService {
   public async generateStillImage(input: OpinionPlacardVideoInput): Promise<string | null> {
     try {
       const outputPath = path.join(input.outputDir, `${input.slug}.png`);
-      const bundleLocation = await bundle({
-        entryPoint: path.resolve(process.cwd(), 'src/video/index.tsx'),
-      });
+      const bundleLocation = await this.getBundleLocation();
       const avatarDataUrl = await this.readAvatarDataUrl(input.avatarPath);
       const inputProps: OpinionPlacardVideoProps = {
         authorName: input.authorName,
@@ -124,6 +162,8 @@ export class OpinionPlacardVideoGenerationService {
         serveUrl: bundleLocation,
         id: VideoTemplate.OPINION_PLACARD,
         inputProps,
+        timeoutInMilliseconds: env.REMOTION_TIMEOUT_MS,
+        chromiumOptions: CHROMIUM_OPTIONS,
       });
 
       await renderStill({
@@ -133,6 +173,8 @@ export class OpinionPlacardVideoGenerationService {
           height: this.getStaticCardHeight(input.question),
         },
         serveUrl: bundleLocation,
+        timeoutInMilliseconds: env.REMOTION_TIMEOUT_MS,
+        chromiumOptions: CHROMIUM_OPTIONS,
         output: outputPath,
         inputProps,
       });
@@ -159,6 +201,7 @@ export class OpinionPlacardVideoGenerationService {
   }
 
   private async prepareBackground(
+    bundleLocation: string,
     slug: string,
     runCount: number,
     backgroundQuery?: string,
@@ -178,12 +221,15 @@ export class OpinionPlacardVideoGenerationService {
         return { videoSrc: null, imageSrc: null };
       }
 
-      const imageSrc = await this.copyIntoPublic(imagePath, slug + '-background');
+      const imageSrc = await this.copyIntoPublic(bundleLocation, imagePath, slug + '-background');
 
       return { videoSrc: null, imageSrc };
     }
 
-    return { videoSrc: await this.prepareBackgroundVideo(slug, runCount, backgroundQuery), imageSrc: null };
+    return {
+      videoSrc: await this.prepareBackgroundVideo(bundleLocation, slug, runCount, backgroundQuery),
+      imageSrc: null,
+    };
   }
 
   /**
@@ -219,11 +265,15 @@ export class OpinionPlacardVideoGenerationService {
   }
 
   /** Remotion serves assets from public/, so the chosen file is copied in before bundling. */
-  private async copyIntoPublic(sourcePath: string, baseName: string): Promise<string> {
-    const generatedDir = path.join(process.cwd(), 'public', 'generated-backgrounds');
+  private async copyIntoPublic(
+    bundleLocation: string,
+    sourcePath: string,
+    baseName: string,
+  ): Promise<string> {
+    const generatedDir = path.join(bundleLocation, 'public', 'generated-backgrounds');
     await fs.promises.mkdir(generatedDir, { recursive: true });
 
-    const extension = path.extname(sourcePath) || '.jpg';
+    const extension = path.extname(sourcePath) || '.bin';
     const publicFileName = baseName + extension;
 
     await fs.promises.copyFile(sourcePath, path.join(generatedDir, publicFileName));
@@ -232,6 +282,7 @@ export class OpinionPlacardVideoGenerationService {
   }
 
   private async prepareBackgroundVideo(
+    bundleLocation: string,
     slug: string,
     runCount: number,
     backgroundVideoQuery?: string,
@@ -250,16 +301,8 @@ export class OpinionPlacardVideoGenerationService {
       return null;
     }
 
-    const generatedDir = path.join(process.cwd(), 'public', 'generated-backgrounds');
-    await fs.promises.mkdir(generatedDir, { recursive: true });
-
-    const extension = path.extname(backgroundPath) || '.mp4';
-    const publicFileName = `${slug}-background${extension}`;
-    const publicPath = path.join(generatedDir, publicFileName);
-
-    await fs.promises.copyFile(backgroundPath, publicPath);
-
-    return `generated-backgrounds/${publicFileName}`;
+    // Same staging rule as images: into the bundle, not the source tree.
+    return this.copyIntoPublic(bundleLocation, backgroundPath, `${slug}-background`);
   }
 
   private getStaticCardHeight(question: string): number {

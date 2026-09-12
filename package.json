@@ -11,13 +11,14 @@
     "placard:test": "tsx src/scripts/generate-opinion-placard.ts",
     "auth:youtube": "tsx src/scripts/youtube-auth.ts",
     "auth:linkedin-urn": "tsx src/scripts/linkedin-urn.ts",
-    "build": "npm run clean && tsc && npm exec tsc-alias",
+    "build": "npm run clean && tsc && npm exec tsc-alias && npm run bundle:remotion",
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
     "test": "vitest",
-    "test:ci": "vitest --run"
+    "test:ci": "vitest --run",
+    "bundle:remotion": "tsx src/scripts/build-remotion-bundle.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1041.0",

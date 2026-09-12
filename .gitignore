@@ -29,3 +29,6 @@ migrations/
 
 # Local placard output when social publishing is disabled
 /social/
+
+# Prebuilt Remotion bundle (generated at build time)
+/remotion-bundle/

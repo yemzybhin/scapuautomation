@@ -16,7 +16,6 @@ import { OpinionPlacardVideoProps } from './types';
 
 const fontFamily = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif';
 const wordmarkFontFamily = '"Mokoto", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif';
-const logoRatio = 0.747;
 const appStoreRatio = 119.66 / 40;
 const playStoreRatio = 238.96 / 70.87;
 const backgroundGlow = '#F0F400';
@@ -83,11 +82,16 @@ const avatarColor = (name: string): string => {
  */
 const BACKGROUND_INTRO_FRAMES = 60;
 
+/**
+ * Renders public/logo.svg inside a square box. Using 'contain' rather than a
+ * hardcoded aspect ratio means the logo can be swapped for a differently shaped
+ * file later without anyone having to update a constant here.
+ */
 const ScapuLogo: React.FC<{ height: number }> = ({ height }) => {
   return (
     <Img
-      src={staticFile('scapu-logo.png')}
-      style={{ width: height * logoRatio, height, objectFit: 'contain' }}
+      src={staticFile('logo.svg')}
+      style={{ width: height, height, objectFit: 'contain' }}
     />
   );
 };

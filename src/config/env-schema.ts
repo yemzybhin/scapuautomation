@@ -26,6 +26,13 @@ export const envSchema = z.object({
   GPT_PAID_API_KEY: z.string().optional(),
   ELEVENLABS_API_KEY: z.string().optional(),
 
+  // Remotion rendering. Defaults are tuned for a small container: rendering is
+  // memory bound, and extra concurrency is what gets Chrome OOM-killed.
+  REMOTION_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(1),
+  REMOTION_TIMEOUT_MS: z.coerce.number().int().min(30000).default(900000),
+  // Decoded frames are held in memory; a small cap matters on a 512MB container.
+  REMOTION_VIDEO_CACHE_BYTES: z.coerce.number().int().min(0).default(67108864),
+
   // Background footage. Images render markedly faster than video, so they are
   // the default; 'video' keeps the stock-clip path, 'none' the generated one.
   PEXELS_API_KEY: z.string().optional(),
