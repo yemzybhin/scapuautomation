@@ -158,12 +158,14 @@ export const REGION_ROTATION: PlacardRegion[] = [
   PlacardRegion.UNITED_STATES,
   PlacardRegion.NIGERIA,
   PlacardRegion.WORLD,
+  PlacardRegion.UNITED_STATES,
   PlacardRegion.NIGERIA,
   PlacardRegion.UNITED_STATES,
   PlacardRegion.NIGERIA,
-  PlacardRegion.WORLD,
+  PlacardRegion.UNITED_STATES,
   PlacardRegion.NIGERIA,
   PlacardRegion.UNITED_STATES,
+
 ];
 
 export const pickRegionForRun = (runCount: number): PlacardRegion =>
