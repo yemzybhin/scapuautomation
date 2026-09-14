@@ -27,6 +27,7 @@ export type OpinionPlacardVideoInput = {
   slug: string;
   runCount: number;
   backgroundVideoQuery?: string;
+  locationHashtag?: string;
 };
 
 /**
@@ -101,6 +102,7 @@ export class OpinionPlacardVideoGenerationService {
         backgroundImageSrc: background.imageSrc,
         soundtrackSrc: this.pickSoundtrack(input.runCount),
         soundtrackVolume: env.SOUNDTRACK_VOLUME,
+        locationHashtag: input.locationHashtag ?? null,
       };
       const composition = await selectComposition({
         serveUrl: bundleLocation,

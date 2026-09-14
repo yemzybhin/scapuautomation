@@ -99,6 +99,7 @@ export class OpinionPlacardGenerationService {
 
     const videoPath = await videoGenerationService.generateVideo({
       backgroundVideoQuery: draft.backgroundVideoQuery,
+      locationHashtag: this.country.hashtag,
       authorName: draft.authorName,
       question: draft.question,
       category: draft.category,

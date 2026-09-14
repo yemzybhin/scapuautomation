@@ -12,10 +12,19 @@ import {
   useVideoConfig,
 } from 'remotion';
 
+import { loadFont as loadEmojiFont } from '@remotion/google-fonts/NotoColorEmoji';
+
 import { OpinionPlacardVideoProps } from './types';
 
-const fontFamily = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif';
-const wordmarkFontFamily = '"Mokoto", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif';
+/**
+ * Linux render hosts ship without an emoji font, so emoji in captions come out
+ * blank in production even though they render locally on Windows or macOS.
+ * Loading Noto Color Emoji as a webfont makes rendering identical everywhere.
+ */
+const { fontFamily: emojiFontFamily } = loadEmojiFont();
+
+const fontFamily = `-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif, "${emojiFontFamily}"`;
+const wordmarkFontFamily = `"Mokoto", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif, "${emojiFontFamily}"`;
 const appStoreRatio = 119.66 / 40;
 const playStoreRatio = 238.96 / 70.87;
 const backgroundGlow = '#F0F400';
@@ -193,6 +202,69 @@ const AnimatedBackground: React.FC<{
   );
 };
 
+/** Horizontal breathing room on each side of the location hashtag. */
+const HASHTAG_PADDING_X = 48;
+/** Short names would otherwise balloon when fitted to the full width. */
+const HASHTAG_MAX_FONT_SIZE = 150;
+const HASHTAG_MEASURE_SIZE = 100;
+
+/**
+ * Width of the text at a reference size, measured with the same font the
+ * browser will draw it in, so the fitted size is exact rather than estimated.
+ */
+const measureTextWidth = (text: string, fontWeight: number, size: number): number => {
+  if (typeof document === 'undefined') {
+    return 0;
+  }
+
+  const context = document.createElement('canvas').getContext('2d');
+
+  if (!context) {
+    return 0;
+  }
+
+  context.font = fontWeight + ' ' + size + 'px ' + fontFamily;
+
+  return context.measureText(text).width;
+};
+
+/**
+ * Where the opinion comes from, e.g. #Nigeria. It sits above the background
+ * overlays so the dimming never reaches it, and below the card, which slides
+ * in over it. Sized from the video width, capped for short names.
+ */
+const LocationHashtag: React.FC<{ hashtag: string }> = ({ hashtag }) => {
+  const { width } = useVideoConfig();
+  const availableWidth = width - HASHTAG_PADDING_X * 2;
+  const fontSize = React.useMemo(() => {
+    const measured = measureTextWidth(hashtag, 900, HASHTAG_MEASURE_SIZE);
+    const fitted = measured > 0
+      ? (availableWidth / measured) * HASHTAG_MEASURE_SIZE
+      : availableWidth / (hashtag.length * 0.62);
+
+    return Math.floor(Math.min(HASHTAG_MAX_FONT_SIZE, fitted));
+  }, [hashtag, availableWidth]);
+
+  return (
+    <AbsoluteFill
+      style={{ justifyContent: 'center', alignItems: 'center', padding: '0 ' + HASHTAG_PADDING_X + 'px' }}
+    >
+      <div
+        style={{
+          color: '#ffffff',
+          fontFamily,
+          fontWeight: 900,
+          fontSize,
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {hashtag}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 const TypingQuestion: React.FC<{
   question: string;
   startFrame: number;
@@ -200,16 +272,26 @@ const TypingQuestion: React.FC<{
   instant?: boolean;
 }> = ({ question, startFrame, reservedLineCount, instant }) => {
   const frame = useCurrentFrame();
-  const charsVisible = instant
-    ? question.length
+  // Type by grapheme, not UTF-16 unit: slicing a string cuts emoji in half, and
+  // with this easing the cut sits on screen for about a second before the end.
+  const graphemes = React.useMemo(
+    () =>
+      Array.from(
+        new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(question),
+        part => part.segment,
+      ),
+    [question],
+  );
+  const graphemesVisible = instant
+    ? graphemes.length
     : Math.floor(
-        interpolate(frame, [startFrame, startFrame + 90], [0, question.length], {
+        interpolate(frame, [startFrame, startFrame + 90], [0, graphemes.length], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
           easing: Easing.bezier(0.22, 1, 0.36, 1),
         }),
       );
-  const visibleQuestion = question.slice(0, charsVisible);
+  const visibleQuestion = graphemes.slice(0, graphemesVisible).join('');
   const cursorVisible = !instant && frame < startFrame + 105 && Math.floor(frame / 10) % 2 === 0;
 
   return (
@@ -295,6 +377,7 @@ export const OpinionPlacardVideoTemplate: React.FC<OpinionPlacardVideoProps> = (
   backgroundImageSrc,
   soundtrackSrc,
   soundtrackVolume,
+  locationHashtag,
   staticCardOnly,
 }) => {
   const frame = useCurrentFrame();
@@ -364,6 +447,9 @@ export const OpinionPlacardVideoTemplate: React.FC<OpinionPlacardVideoProps> = (
           }}
         />
       )}
+
+      {/* Above both overlays so it stays bright; the card below renders on top of it. */}
+      {staticCardOnly || !locationHashtag ? null : <LocationHashtag hashtag={locationHashtag} />}
 
       <div
         style={{

@@ -13,6 +13,8 @@ export type PlacardCountry = {
   /** ISO code used for the Google Trends `geo` parameter. */
   code: string;
   name: string;
+  /** Shown large on the video so viewers can tell where the take comes from. */
+  hashtag: string;
   /** Matches `locale` on a persona pool in opinionPlacardPersonas.ts. */
   personaLocale: string;
   avatarEthnicity: AvatarEthnicity;
@@ -41,6 +43,7 @@ const GLOBAL_CATEGORIES: OpinionPlacardCategory[] = [
 export const NIGERIA: PlacardCountry = {
   code: 'NG',
   name: 'Nigeria',
+  hashtag: '#Nigeria',
   personaLocale: 'Nigerian',
   avatarEthnicity: 'african',
   news: { hl: 'en-NG', gl: 'NG', ceid: 'NG:en' },
@@ -59,6 +62,7 @@ export const NIGERIA: PlacardCountry = {
 export const UNITED_STATES: PlacardCountry = {
   code: 'US',
   name: 'the United States',
+  hashtag: '#UnitedStates',
   personaLocale: 'American',
   avatarEthnicity: 'european',
   news: { hl: 'en-US', gl: 'US', ceid: 'US:en' },
@@ -77,6 +81,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'GB',
     name: 'the United Kingdom',
+    hashtag: '#UnitedKingdom',
     personaLocale: 'British',
     avatarEthnicity: 'european',
     news: { hl: 'en-GB', gl: 'GB', ceid: 'GB:en' },
@@ -86,6 +91,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'ZA',
     name: 'South Africa',
+    hashtag: '#SouthAfrica',
     personaLocale: 'South African',
     avatarEthnicity: 'african',
     news: { hl: 'en-ZA', gl: 'ZA', ceid: 'ZA:en' },
@@ -95,6 +101,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'IN',
     name: 'India',
+    hashtag: '#India',
     personaLocale: 'Indian',
     avatarEthnicity: 'asian',
     news: { hl: 'en-IN', gl: 'IN', ceid: 'IN:en' },
@@ -104,6 +111,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'BR',
     name: 'Brazil',
+    hashtag: '#Brazil',
     personaLocale: 'Brazilian',
     avatarEthnicity: 'latino',
     news: { hl: 'en-US', gl: 'BR', ceid: 'BR:en' },
@@ -113,6 +121,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'MX',
     name: 'Mexico',
+    hashtag: '#Mexico',
     personaLocale: 'Mexican',
     avatarEthnicity: 'latino',
     news: { hl: 'en-US', gl: 'MX', ceid: 'MX:en' },
@@ -122,6 +131,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'FR',
     name: 'France',
+    hashtag: '#France',
     personaLocale: 'French',
     avatarEthnicity: 'european',
     news: { hl: 'en-US', gl: 'FR', ceid: 'FR:en' },
@@ -131,6 +141,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'JP',
     name: 'Japan',
+    hashtag: '#Japan',
     personaLocale: 'Japanese',
     avatarEthnicity: 'asian',
     news: { hl: 'en-US', gl: 'JP', ceid: 'JP:en' },
@@ -140,6 +151,7 @@ export const WORLD_COUNTRIES: PlacardCountry[] = [
   {
     code: 'CN',
     name: 'China',
+    hashtag: '#China',
     personaLocale: 'Chinese',
     avatarEthnicity: 'asian',
     news: { hl: 'en-US', gl: 'SG', ceid: 'SG:en' },
@@ -165,7 +177,6 @@ export const REGION_ROTATION: PlacardRegion[] = [
   PlacardRegion.UNITED_STATES,
   PlacardRegion.NIGERIA,
   PlacardRegion.UNITED_STATES,
-
 ];
 
 export const pickRegionForRun = (runCount: number): PlacardRegion =>

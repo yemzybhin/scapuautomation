@@ -15,6 +15,7 @@ export interface OpinionPlacardVideoProps {
   backgroundImageSrc?: string | null;
   soundtrackSrc?: string | null;
   soundtrackVolume?: number;
+  locationHashtag?: string | null;
   staticCardOnly?: boolean;
 }
 
